@@ -222,7 +222,7 @@ func (w *Window_TinyProject) parseCore() {
 			//o := strings.Replace(newPath, " ", "\\ ", -1)
 			func() {
 				cmd := exec.Command("./pngquant.exe", "--skip-if-larger",
-					"--output", newPath, "--speed", "1", "255", "--", v)
+					"--output", newPath, "--speed", "1", "256", "--", v)
 				cmd.Stdout = os.Stdout
 				cmd.Stderr = os.Stderr
 				<-time.After(1e7)
