@@ -124,6 +124,7 @@ func (wt *Window_TinyProject) initUI() {
 				AlwaysConsumeSpace: true,
 				MinSize:            Size{100, 100},
 				VScroll:            true,
+				MaxLength:          65535,
 			},
 		},
 	}
@@ -213,9 +214,10 @@ func (w *Window_TinyProject) parseCore() {
 	for _, v := range fileList {
 		w.showLog(v)
 		newPath := strings.Replace(v, input, output, 1)
+		newDir, _ := filepath.Split(newPath)
+		os.MkdirAll(newDir, 0755)
 		if isPng(v) {
-			newDir, _ := filepath.Split(newPath)
-			os.MkdirAll(newDir, 0755)
+
 			//i := strings.Replace(v, " ", "\\ ", -1)
 			//o := strings.Replace(newPath, " ", "\\ ", -1)
 			func() {
@@ -244,6 +246,10 @@ func (w *Window_TinyProject) startParse() {
 }
 
 func (w *Window_TinyProject) showLog(data ...interface{}) {
+	if w.textEdit_info.TextLength() > w.textEdit_info.MaxLength()/4 {
+		w.textEdit_info.SetText("")
+	}
+
 	str := fmt.Sprintln(data...)
 	str = str + "\r\n"
 	w.textEdit_info.AppendText(str)
