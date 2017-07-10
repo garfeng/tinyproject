@@ -162,7 +162,11 @@ func (wt *Window_TinyProject) on_pushButton_output_path_clicked() {
 }
 
 func (w *Window_TinyProject) startParse() {
-	w.showLog("hello world")
+	if isDir(w.lineEdit_project_path) && isDir(w.lineEdit_output_path) {
+
+	}
+
+	w.showLog(tr("input error"))
 }
 
 func (w *Window_TinyProject) showLog(data ...interface{}) {
