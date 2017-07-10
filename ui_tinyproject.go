@@ -3,14 +3,19 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"time"
 
 	"github.com/lxn/walk"
 	. "github.com/lxn/walk/declarative"
 )
 
 type Config struct {
-	project_path string
-	output_path  string
+	Project_path string
+	Output_path  string
 }
 
 type Window_TinyProject struct {
@@ -18,6 +23,8 @@ type Window_TinyProject struct {
 	ui                    *MainWindow
 	lineEdit_project_path *walk.LineEdit
 	lineEdit_output_path  *walk.LineEdit
+
+	pushButton_start *walk.PushButton
 
 	progressBar_status *walk.ProgressBar
 	textEdit_info      *walk.TextEdit
@@ -75,6 +82,7 @@ func (wt *Window_TinyProject) initUI() {
 									LineEdit{
 										AssignTo:           &wt.lineEdit_project_path,
 										AlwaysConsumeSpace: true,
+										Text:               config.Project_path,
 									},
 									PushButton{
 										OnClicked: wt.on_pushButton_project_path_clicked,
@@ -88,6 +96,7 @@ func (wt *Window_TinyProject) initUI() {
 									LineEdit{
 										AssignTo:           &wt.lineEdit_output_path,
 										AlwaysConsumeSpace: true,
+										Text:               config.Output_path,
 									},
 									PushButton{
 										OnClicked: wt.on_pushButton_output_path_clicked,
@@ -103,15 +112,18 @@ func (wt *Window_TinyProject) initUI() {
 				Text:      tr("Start Parse"),
 				OnClicked: wt.startParse,
 				MaxSize:   Size{200, 100},
+				AssignTo:  &wt.pushButton_start,
 			},
 			ProgressBar{
 				AssignTo: &wt.progressBar_status,
+				MaxValue: 100,
+				MinValue: 0,
 			},
 			TextEdit{
-				Enabled:            false,
 				AssignTo:           &wt.textEdit_info,
 				AlwaysConsumeSpace: true,
 				MinSize:            Size{100, 100},
+				VScroll:            true,
 			},
 		},
 	}
@@ -124,18 +136,13 @@ func (wt *Window_TinyProject) Setup() {
 	}
 }
 
-//	OnTriggered: wt.on_about_triggered,
-
-//	OnClicked: wt.on_pushButton_project_path_clicked,
-
-//	OnClicked: wt.on_pushButton_output_path_clicked,
-
 func (wt *Window_TinyProject) on_about_triggered() {
 	walk.MsgBox(wt, tr("About"), tr("about info"), walk.MsgBoxIconInformation)
 }
 
 func (wt *Window_TinyProject) selectFolder(input *walk.LineEdit) {
 	dlg := new(walk.FileDialog)
+
 	oldPath := input.Text()
 
 	if oldPath != "" {
@@ -151,6 +158,13 @@ func (wt *Window_TinyProject) selectFolder(input *walk.LineEdit) {
 	}
 
 	input.SetText(dlg.FilePath)
+
+	config.Project_path = wt.lineEdit_project_path.Text()
+	config.Output_path = wt.lineEdit_output_path.Text()
+
+	log.Println(config)
+
+	writeConf()
 }
 
 func (wt *Window_TinyProject) on_pushButton_project_path_clicked() {
@@ -161,16 +175,77 @@ func (wt *Window_TinyProject) on_pushButton_output_path_clicked() {
 	wt.selectFolder(wt.lineEdit_output_path)
 }
 
-func (w *Window_TinyProject) startParse() {
-	if isDir(w.lineEdit_project_path) && isDir(w.lineEdit_output_path) {
+func (wt *Window_TinyProject) initProgressBar() {
+	wt.progressBar_status.SetValue(0)
+}
 
+func (wt *Window_TinyProject) setValueOfProgressBar(v float64) {
+	wt.progressBar_status.SetValue(int(v))
+}
+
+func (w *Window_TinyProject) parseCore() {
+	defer w.pushButton_start.SetEnabled(true)
+
+	input := w.lineEdit_project_path.Text()
+	output := w.lineEdit_output_path.Text()
+	if !isDir(input) {
+		w.showLog(tr("input is not a dir"))
+		return
 	}
 
-	w.showLog(tr("input error"))
+	err := os.RemoveAll(output)
+	if err != nil {
+		w.showLog(err)
+		return
+	}
+	err = os.MkdirAll(output, 0755)
+	if err != nil {
+		w.showLog(err)
+		return
+	}
+
+	fileList := allFilesInDir(input)
+	one_step := 100.0 / float64(len(fileList))
+	current_data := float64(0)
+
+	w.initProgressBar()
+
+	for _, v := range fileList {
+		w.showLog(v)
+		newPath := strings.Replace(v, input, output, 1)
+		if isPng(v) {
+			newDir, _ := filepath.Split(newPath)
+			os.MkdirAll(newDir, 0755)
+			//i := strings.Replace(v, " ", "\\ ", -1)
+			//o := strings.Replace(newPath, " ", "\\ ", -1)
+			func() {
+				cmd := exec.Command("./pngquant.exe", "--skip-if-larger",
+					"--output", newPath, "--speed", "1", "255", "--", v)
+				cmd.Stdout = os.Stdout
+				cmd.Stderr = os.Stderr
+				<-time.After(1e7)
+				err := cmd.Run()
+				if err != nil {
+					w.showLog("Error:", err, "copy the original file")
+					copy(v, newPath)
+				}
+			}()
+		} else {
+			copy(v, newPath)
+		}
+		current_data += one_step
+		w.setValueOfProgressBar(current_data)
+	}
+}
+
+func (w *Window_TinyProject) startParse() {
+	w.pushButton_start.SetEnabled(false)
+	go w.parseCore()
 }
 
 func (w *Window_TinyProject) showLog(data ...interface{}) {
 	str := fmt.Sprintln(data...)
 	str = str + "\r\n"
 	w.textEdit_info.AppendText(str)
+	log.Println(data...)
 }

@@ -13,15 +13,18 @@ all:clean build_dir $(TARGET)
 build_dir:
 	if [ ! -d build ] ; then mkdir build ; fi
 
+# -H windowsgui
 build/%:$(SYSO)
 	for lang in $(allLangs);\
 	do\
 		echo $$lang && \
 		cp language/translate_$$lang.go ./lang_map.go -rf && \
-		go build -ldflags "-w -s -H windowsgui" -o $@_$$lang.exe &&\
+		go build -ldflags "-w -s" -o $@_$$lang.exe &&\
 		upx $@_$$lang.exe -9 && \
 		rm ./lang_map.go ;\
 	done
+	cp pngquant.exe build/
+	cp config.json build/
 
 %.syso:$(RS)
 	windres.exe -o $@ $(RS)
@@ -36,9 +39,3 @@ debug:
 
 clean:
 	rm build -rf
-	rm *.a -rf
-	rm *.o -rf
-	rm *.syso -rf
-	rm *.txt -rf
-	rm *.json -rf
-	rm www -rf

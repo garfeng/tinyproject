@@ -1,6 +1,10 @@
 package main
 
 import (
+	"encoding/json"
+	"io"
+	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -58,4 +62,44 @@ func allFilesInDir(path string) []string {
 	}
 
 	return result
+}
+
+func copy(src, dst string) error {
+	fp2, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer fp2.Close()
+	fp1, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer fp1.Close()
+	_, err = io.Copy(fp2, fp1)
+	return err
+}
+
+func readConf() {
+	data, err := ioutil.ReadFile("./config.json")
+	if err != nil {
+		return
+	}
+	json.Unmarshal(data, config)
+}
+
+func writeConf() {
+	data, err := json.Marshal(config)
+	if err != nil {
+		log.Println(err)
+	}
+	log.Println(config, string(data))
+	err = ioutil.WriteFile("./config.json", data, 0644)
+	if err != nil {
+		log.Println(err)
+	}
+}
+
+func init() {
+	config = new(Config)
+	readConf()
 }

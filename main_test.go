@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"path/filepath"
 	"testing"
 )
 
@@ -13,4 +14,8 @@ func Test_isPng(t *testing.T) {
 
 func Test_allFilesInDir(t *testing.T) {
 	fmt.Println(allFilesInDir("./"))
+}
+
+func Test_FilePath(t *testing.T) {
+	fmt.Println(filepath.Dir("."))
 }

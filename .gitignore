@@ -2,3 +2,5 @@ build
 build/*
 *.syso
 lang_map.go
+pngquant.exe
+*.json
