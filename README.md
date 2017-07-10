@@ -2,9 +2,9 @@
 
 缩小png：[https://github.com/pornel/pngquant](https://github.com/pornel/pngquant)
 
-====
+----
 
-编译
+## 编译
 
 ``` shell
 make
